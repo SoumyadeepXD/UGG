@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Admin from './Admin.jsx';
-import { load, save, sha, fetchBackendContent, saveToBackend } from './util.js';
+import { load, save, sha, fetchBackendContent, saveToBackend, fixImgUrl } from './util.js';
 
 const IDS = ['home', 'events', 'about', 'esports', 'timeline', 'gallery', 'sponsors', 'team', 'join'];
 const ext = (u) => (/^https?:/.test(u || '') ? { target: '_blank', rel: 'noopener' } : {});
@@ -124,7 +124,7 @@ function Hero({ c }) {
   const [s, setS] = useState({ k: 0, prev: -1 });
   const [off, setOff] = useState(false);
   const liveEv = c.events.items.find((x) => x.status === 'live');
-  const art = h.img || c.brand.logo;
+  const art = fixImgUrl(h.img) || c.brand.logo;
 
   useEffect(() => {
     const io = new IntersectionObserver(([e]) => setOff(!e.isIntersecting));
@@ -230,7 +230,7 @@ function Member({ m, i, logo }) {
   return (
     <R className="mem" style={{ '--i': i }} onPointerMove={tilt} onPointerLeave={reset}>
       <div className="ph">
-        {m.img ? <img src={m.img} alt={m.name} /> : logo ? <img className="wm" src={logo} alt="" /> : <b>{(m.name || '?')[0]}</b>}
+        {m.img ? <img src={fixImgUrl(m.img)} alt={m.name} /> : logo ? <img className="wm" src={fixImgUrl(logo)} alt="" /> : <b>{(m.name || '?')[0]}</b>}
       </div>
       <span className="ix">{pad(i)}</span>
       <div className="inf">
@@ -370,7 +370,7 @@ export default function App() {
           <div className="evg">
             {c.events.items.map((x, i) => (
               <R key={i} as="a" className={`ev ${x.status === 'live' ? 'live' : ''}`} style={{ '--i': i }} href={x.url || '#timeline'} {...ext(x.url)}>
-                {x.img && <img src={x.img} alt="" />}
+                {x.img && <img src={fixImgUrl(x.img)} alt="" />}
                 <b className="gh">{x.game}</b>
                 <div className="ei">
                   <span className={`tag ${x.status}`}>{x.status}</span>
@@ -411,7 +411,7 @@ export default function App() {
           <div className="gal">
             {c.gallery.items.map((g, i) => (
               <R key={i} as="figure" style={{ '--i': i }} onClick={() => g.img && setLb(g.img)}>
-                {g.img && <img src={g.img} alt={g.caption} loading="lazy" />}
+                {g.img && <img src={fixImgUrl(g.img)} alt={g.caption} loading="lazy" />}
                 <figcaption>{g.caption}</figcaption>
               </R>
             ))}
@@ -424,7 +424,7 @@ export default function App() {
             <div>
               {[...tick, ...tick].map((x, i) => (
                 <a key={i} href={x.url} aria-label={x.name} {...ext(x.url)}>
-                  {x.logo ? <img src={x.logo} alt={x.name} /> : <span>{x.name}</span>}
+                  {x.logo ? <img src={fixImgUrl(x.logo)} alt={x.name} /> : <span>{x.name}</span>}
                 </a>
               ))}
             </div>
@@ -449,7 +449,7 @@ export default function App() {
           <footer>
             <div>
               <a className="logo" style={{ color: '#fff' }}>
-                {c.brand.logo && <img src={c.brand.logo} alt="" />}
+                {c.brand.logo && <img src={fixImgUrl(c.brand.logo)} alt="" />}
                 <span><b>{c.brand.name}</b><small>{c.brand.sub}</small></span>
               </a>
               <p style={{ marginTop: 12, color: 'var(--mut)' }}>{f.about}</p>
@@ -467,7 +467,7 @@ export default function App() {
         </section>
       </main>
 
-      <div className={`lb${lb ? ' on' : ''}`} onClick={() => setLb(null)}>{lb && <img src={lb} alt="" />}</div>
+      <div className={`lb${lb ? ' on' : ''}`} onClick={() => setLb(null)}>{lb && <img src={fixImgUrl(lb)} alt="" />}</div>
 
       {login && <Login hash={c.admin.hash} onCancel={() => setLogin(false)} onOk={() => { setAuthed(true); sessionStorage.setItem('uggA', '1'); setLogin(false); setPanel(true); }} />}
       {panel && (

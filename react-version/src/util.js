@@ -6,6 +6,13 @@ export const API_HOST = import.meta.env.VITE_API_URL || (
     : ''
 );
 
+export const fixImgUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/uploads/')) return '.' + url;
+  return url;
+};
+
 export const merge = (a, b) => {
   if (Array.isArray(a) || typeof a !== 'object' || a === null) return b === undefined ? a : b;
   const o = { ...a };

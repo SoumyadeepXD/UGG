@@ -6,19 +6,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  contents: write
 
 jobs:
   build-and-deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -40,17 +31,10 @@ jobs:
         run: |
           cd react-version
           npm run build
-          # Copy standalone HTML version as an alternative route
-          cp ../index.html dist/standalone.html
+          cp ../standalone.html dist/standalone.html 2>/dev/null || true
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to gh-pages branch
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          path: 'react-version/dist'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          folder: react-version/dist
+          branch: gh-pages

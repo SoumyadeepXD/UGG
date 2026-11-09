@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DEF } from './content.js';
-import { merge, sha, uploadFile, syncGoogleSheet, checkBackendStatus } from './util.js';
+import { merge, sha, uploadFile, syncGoogleSheet, checkBackendStatus, fixImgUrl } from './util.js';
 
 const STATUS_OPTIONS = [
   { val: 'live', label: '🔴 Live Now' },
@@ -412,7 +412,7 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
               {newTourney.img && (
                 <div className="adm-preview-box">
                   <small>Poster Preview:</small>
-                  <img src={newTourney.img} alt="Poster preview" style={{ height: 80, borderRadius: 6, objectFit: 'cover' }} />
+                  <img src={fixImgUrl(newTourney.img)} alt="Poster preview" style={{ height: 80, borderRadius: 6, objectFit: 'cover' }} />
                 </div>
               )}
 
@@ -429,7 +429,7 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
               {draft.events?.items?.map((item, idx) => (
                 <div key={idx} className="adm-item-card">
                   <div className="adm-item-thumb">
-                    {item.img ? <img src={item.img} alt={item.title} /> : <div className="adm-placeholder-box">🎮</div>}
+                    {item.img ? <img src={fixImgUrl(item.img)} alt={item.title} /> : <div className="adm-placeholder-box">🎮</div>}
                   </div>
                   <div className="adm-item-info">
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -521,7 +521,7 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
               {newMember.img && (
                 <div className="adm-preview-box">
                   <small>Avatar Preview:</small>
-                  <img src={newMember.img} alt="Member preview" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }} />
+                  <img src={fixImgUrl(newMember.img)} alt="Member preview" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }} />
                 </div>
               )}
 
@@ -539,7 +539,7 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
                 <div key={idx} className="adm-item-card">
                   <div className="adm-member-avatar">
                     {item.img ? (
-                      <img src={item.img} alt={item.name} />
+                      <img src={fixImgUrl(item.img)} alt={item.name} />
                     ) : (
                       <div className="adm-avatar-placeholder">{(item.name || '?')[0]}</div>
                     )}
@@ -599,7 +599,7 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
               {newGallery.img && (
                 <div className="adm-preview-box">
                   <small>Preview:</small>
-                  <img src={newGallery.img} alt="Gallery preview" style={{ height: 100, borderRadius: 8, objectFit: 'cover' }} />
+                  <img src={fixImgUrl(newGallery.img)} alt="Gallery preview" style={{ height: 100, borderRadius: 8, objectFit: 'cover' }} />
                 </div>
               )}
 
@@ -616,7 +616,7 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
               {draft.gallery?.items?.map((item, idx) => (
                 <div key={idx} className="adm-gallery-card">
                   <div className="adm-gallery-img">
-                    {item.img ? <img src={item.img} alt={item.caption} /> : <div className="adm-placeholder-box">🖼️</div>}
+                    {item.img ? <img src={fixImgUrl(item.img)} alt={item.caption} /> : <div className="adm-placeholder-box">🖼️</div>}
                   </div>
                   <input
                     className="adm-gallery-input"

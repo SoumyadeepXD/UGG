@@ -9,6 +9,7 @@
     "frontend": "npm run dev --prefix react-version",
     "dev:backend": "node --watch backend/server.js",
     "dev:frontend": "npm run dev --prefix react-version",
+    "build": "npm run build --prefix react-version && cp react-version/dist/index.html ./index.html && cp -r react-version/dist/assets ./ && cp -r react-version/dist/uploads ./",
     "build:frontend": "npm run build --prefix react-version",
     "install:all": "npm install --prefix backend && npm install --prefix react-version"
   },
