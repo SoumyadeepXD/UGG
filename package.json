@@ -1,0 +1,18 @@
+{
+  "name": "ugg-portal",
+  "version": "1.0.0",
+  "description": "UGG (UEM Gamerz Guild) Website with Backend & Admin Portal",
+  "scripts": {
+    "start": "node backend/server.js",
+    "server": "node backend/server.js",
+    "backend": "node backend/server.js",
+    "frontend": "npm run dev --prefix react-version",
+    "dev:backend": "node --watch backend/server.js",
+    "dev:frontend": "npm run dev --prefix react-version",
+    "build:frontend": "npm run build --prefix react-version",
+    "install:all": "npm install --prefix backend && npm install --prefix react-version"
+  },
+  "keywords": ["esports", "gaming", "guild", "uemk", "tournaments", "admin-portal"],
+  "author": "Soumyadeep Roy",
+  "license": "ISC"
+}
