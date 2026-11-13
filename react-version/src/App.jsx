@@ -370,11 +370,25 @@ export default function App() {
           <div className="evg">
             {c.events.items.map((x, i) => (
               <R key={i} as="a" className={`ev ${x.status === 'live' ? 'live' : ''}`} style={{ '--i': i }} href={x.url || '#timeline'} {...ext(x.url)}>
-                {x.img && <img src={fixImgUrl(x.img)} alt="" />}
+                {x.img ? (
+                  <img src={fixImgUrl(x.img)} alt={x.title || 'Tournament Poster'} className="ev-img" />
+                ) : (
+                  <div className="ev-fallback">
+                    <span className="ev-fallback-tag">{x.game || 'UGG'}</span>
+                  </div>
+                )}
+                <i className="ev-sheen" />
                 <b className="gh">{x.game}</b>
                 <div className="ei">
                   <span className={`tag ${x.status}`}>{x.status}</span>
-                  <div><h3>{x.title}</h3><div className="m"><span>{x.date}</span><span>{x.game}</span><span>{x.meta}</span></div></div>
+                  <div className="ei-bot">
+                    <h3>{x.title}</h3>
+                    <div className="m">
+                      {x.date && <span>{x.date}</span>}
+                      {x.game && <span>{x.game}</span>}
+                      {x.meta && <span>{x.meta}</span>}
+                    </div>
+                  </div>
                 </div>
                 <span className="ar">{x.cta || { live: 'Register now', registering: 'Register', upcoming: 'Details' }[x.status] || 'Open'} →</span>
               </R>
@@ -445,6 +459,15 @@ export default function App() {
             <R as="h2">{c.cta.title}&nbsp;<em>{c.cta.accent}</em></R>
             <R className="words">{c.cta.words.map((w, i) => <span key={i}>{w}</span>)}</R>
             <R as="a" className="btn fill" href={c.cta.url} {...ext(c.cta.url)}>{c.cta.btn}</R>
+            {c.socials && c.socials.length > 0 && (
+              <div className="social-pills">
+                {c.socials.map((s, i) => (
+                  <a key={i} className="social-pill" href={s.u} {...ext(s.u)}>
+                    {s.t}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
           <footer>
             <div>
@@ -454,15 +477,39 @@ export default function App() {
               </a>
               <p style={{ marginTop: 12, color: 'var(--mut)' }}>{f.about}</p>
             </div>
-            {f.cols.map((k, i) => (
+            <div>
+              <h4>Created & Maintained By</h4>
+              <div className="maintainers-list">
+                {(c.maintainers || [{ name: 'Soumyadeep Roy', role: 'Lead Developer' }]).map((m, i) => {
+                  const name = typeof m === 'string' ? m : m.name;
+                  const link = typeof m === 'object' ? m.link : '';
+                  const role = typeof m === 'object' ? m.role : '';
+                  return (
+                    <div key={i} className="maintainer-entry">
+                      {link ? <a href={link} {...ext(link)} className="maintainer-link">{name}</a> : <span className="maintainer-name">{name}</span>}
+                      {role && <small className="maintainer-role">{role}</small>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {f.cols.filter((k) => k.title.toLowerCase() !== 'explore').map((k, i) => (
               <div key={i}><h4>{k.title}</h4>{k.links.map((l, j) => <a key={j} href={l.u} {...ext(l.u)}>{l.t}</a>)}</div>
             ))}
           </footer>
           <div className="copy">
-            📍 {f.location} &nbsp;|&nbsp; {f.copy} &nbsp;|&nbsp;{' '}
-            {c.socials.map((s, i) => <a key={i} style={{ display: 'inline', marginRight: 10 }} href={s.u} {...ext(s.u)}>{s.t}</a>)}
-            <button className="alink" id="ab" type="button" onClick={openAdmin}>Admin</button>
-            <span style={{ float: 'right', color: 'var(--red)' }} className="hd">{f.tagline}</span>
+            <div>
+              <span>{f.location}</span> &nbsp;|&nbsp; <span>{f.copy}</span>
+            </div>
+            <div className="copy-socials">
+              {c.socials?.map((s, i) => (
+                <a key={i} className="copy-social-link" href={s.u} {...ext(s.u)}>
+                  {s.t}
+                </a>
+              ))}
+              <button className="alink" id="ab" type="button" onClick={openAdmin}>Admin Control</button>
+            </div>
+            <span style={{ color: 'var(--red)' }} className="hd">{f.tagline}</span>
           </div>
         </section>
       </main>

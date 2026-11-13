@@ -35,10 +35,10 @@ team:{title:'TEAM',sub:'The people who run UGG.',items:[
 {name:'Member Name',role:'Events Lead',img:'',link:''},
 {name:'Member Name',role:'Sponsorship & PR Lead',img:'',link:''}]},
 sponsors:{title:'OUR SPONSORS',cta:'Become a sponsor',email:'yourclub@email.com',link:'',sub:'Supported by our partners and technology brands.',items:[{name:'intel',logo:'',url:'#'},{name:'logitech G',logo:'',url:'#'},{name:'Red Bull',logo:'',url:'#'},{name:'RAZER',logo:'',url:'#'}]},
-cta:{title:'BE A PART OF',accent:'UGG',words:['Compete','Create','Learn','Grow'],btn:'Join the Community',url:'#'},
+cta:{title:'BE A PART OF',accent:'UGG',words:['Die','Respawn','Play'],btn:'Join the Community',url:'#'},
+maintainers:[{name:'Soumyadeep Roy',role:'Lead Developer & Web Ops',link:'https://github.com/SoumyadeepXD'}],
 footer:{about:'The official gaming club of UEM — for players, creators, and game developers.',location:'UEM Kolkata',copy:'© 2026 UEM Gamerz Guild (UGG). All Rights Reserved.',tagline:'Play. Compete. Create. Connect.',
-cols:[{title:'Explore',links:[{t:'Home',u:'#home'},{t:'Events',u:'#events'},{t:'About',u:'#about'},{t:'Timeline',u:'#timeline'},{t:'Gallery',u:'#gallery'},{t:'Sponsors',u:'#sponsors'},{t:'Team',u:'#team'}]},
-{title:'Community',links:[{t:'Esports',u:'#esports'},{t:'Game Development',u:'#esports'},{t:'Tournaments',u:'#events'},{t:'Workshops',u:'#esports'}]},
+cols:[{title:'Community',links:[{t:'Esports',u:'#esports'},{t:'Game Development',u:'#esports'},{t:'Tournaments',u:'#events'},{t:'Workshops',u:'#esports'}]},
 {title:'Resources',links:[{t:'Event Guidelines',u:'#'},{t:'Join the Team',u:'#team'},{t:'Code of Conduct',u:'#'},{t:'FAQ',u:'#'}]}]},
 socials:[{t:'Discord',u:'#'},{t:'Instagram',u:'#'},{t:'YouTube',u:'#'},{t:'Twitch',u:'#'},{t:'LinkedIn',u:'#'}]
 };

@@ -80,6 +80,35 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
   // Google Sheet URL State
   const [sheetUrl, setSheetUrl] = useState('');
   const [newWord, setNewWord] = useState('');
+  const [editTourneyIdx, setEditTourneyIdx] = useState(null);
+  const [newSocial, setNewSocial] = useState({ t: 'Discord', u: '' });
+
+  const addSocial = () => {
+    const platform = newSocial.t === 'Custom' ? (newSocial.customName || 'Link') : newSocial.t;
+    if (!platform.trim() || !newSocial.u.trim()) return toast('Please enter both platform name and URL.');
+    mut((d) => {
+      if (!d.socials) d.socials = [];
+      d.socials.push({ t: platform.trim(), u: newSocial.u.trim() });
+    });
+    setNewSocial({ t: 'Instagram', u: '' });
+    toast('Social handle added!');
+  };
+
+  const [newMaintainer, setNewMaintainer] = useState({ name: '', role: '', link: '' });
+
+  const addMaintainer = () => {
+    if (!newMaintainer.name.trim()) return toast('Please enter a name.');
+    mut((d) => {
+      if (!d.maintainers) d.maintainers = [];
+      d.maintainers.push({
+        name: newMaintainer.name.trim(),
+        role: newMaintainer.role.trim(),
+        link: newMaintainer.link.trim(),
+      });
+    });
+    setNewMaintainer({ name: '', role: '', link: '' });
+    toast('Maintainer added!');
+  };
 
   useEffect(() => {
     const r = requestAnimationFrame(() => setOpen(true));
@@ -303,6 +332,7 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
           { id: 'gallery', label: '🖼️ Gallery' },
           { id: 'timeline', label: '⏳ Timeline' },
           { id: 'sponsors', label: '🤝 Sponsors' },
+          { id: 'socials', label: 'Socials & Footer' },
           { id: 'hero', label: '⚡ Hero & Brand' },
           { id: 'theme', label: '🎨 Theme' },
           { id: 'sync', label: '⚙️ Sync & Cloud' },
@@ -389,7 +419,7 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
                   />
                 </div>
                 <div>
-                  <label>Poster Image (URL or Upload)</label>
+                  <label>Poster Image (URL or Upload) — Recommended: 5:4 ratio</label>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <input
                       placeholder="Paste image URL or click Upload"
@@ -410,9 +440,12 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
               </div>
 
               {newTourney.img && (
-                <div className="adm-preview-box">
-                  <small>Poster Preview:</small>
-                  <img src={fixImgUrl(newTourney.img)} alt="Poster preview" style={{ height: 80, borderRadius: 6, objectFit: 'cover' }} />
+                <div className="adm-preview-box" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <img src={fixImgUrl(newTourney.img)} alt="Poster preview" style={{ width: 100, height: 80, aspectRatio: '5 / 4', borderRadius: 8, objectFit: 'cover' }} />
+                  <div>
+                    <small style={{ color: 'var(--mut)' }}>Poster Preview (5:4 Aspect Ratio)</small>
+                    <div style={{ fontSize: 11, color: '#4ade80' }}>✓ 5:4 Intact Aspect Ratio</div>
+                  </div>
                 </div>
               )}
 
@@ -427,31 +460,117 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
 
             <div className="adm-items-list">
               {draft.events?.items?.map((item, idx) => (
-                <div key={idx} className="adm-item-card">
-                  <div className="adm-item-thumb">
-                    {item.img ? <img src={fixImgUrl(item.img)} alt={item.title} /> : <div className="adm-placeholder-box">🎮</div>}
-                  </div>
-                  <div className="adm-item-info">
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <span className={`tag ${item.status}`}>{item.status}</span>
-                      <small style={{ color: 'var(--red)', fontWeight: 700 }}>{item.game}</small>
+                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: 8, background: '#101117', border: '1px solid var(--line)', borderRadius: 10, padding: 12 }}>
+                  <div className="adm-item-card" style={{ border: 'none', padding: 0, background: 'none' }}>
+                    <div className="adm-item-thumb" style={{ width: 64, height: 51, aspectRatio: '5 / 4' }}>
+                      {item.img ? <img src={fixImgUrl(item.img)} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div className="adm-placeholder-box">🎮</div>}
                     </div>
-                    <b>{item.title}</b>
-                    <small style={{ color: 'var(--mut)' }}>{item.date} • {item.meta}</small>
+                    <div className="adm-item-info">
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span className={`tag ${item.status}`}>{item.status}</span>
+                        <small style={{ color: 'var(--red)', fontWeight: 700 }}>{item.game}</small>
+                      </div>
+                      <b>{item.title}</b>
+                      <small style={{ color: 'var(--mut)' }}>{item.date} • {item.meta}</small>
+                    </div>
+                    <div className="adm-item-controls">
+                      <button className="sm" onClick={() => setEditTourneyIdx(editTourneyIdx === idx ? null : idx)} title="Edit tournament poster & details">
+                        {editTourneyIdx === idx ? '✕' : '✏️'}
+                      </button>
+                      <select
+                        value={item.status}
+                        onChange={(e) => mut((d) => { d.events.items[idx].status = e.target.value; })}
+                      >
+                        {STATUS_OPTIONS.map((o) => (
+                          <option key={o.val} value={o.val}>{o.label}</option>
+                        ))}
+                      </select>
+                      <button className="sm" onClick={() => moveTournament(idx, -1)} disabled={idx === 0}>↑</button>
+                      <button className="sm" onClick={() => moveTournament(idx, 1)} disabled={idx === (draft.events.items.length - 1)}>↓</button>
+                      <button className="sm danger" onClick={() => removeTournament(idx)}>🗑️</button>
+                    </div>
                   </div>
-                  <div className="adm-item-controls">
-                    <select
-                      value={item.status}
-                      onChange={(e) => mut((d) => { d.events.items[idx].status = e.target.value; })}
-                    >
-                      {STATUS_OPTIONS.map((o) => (
-                        <option key={o.val} value={o.val}>{o.label}</option>
-                      ))}
-                    </select>
-                    <button className="sm" onClick={() => moveTournament(idx, -1)} disabled={idx === 0}>↑</button>
-                    <button className="sm" onClick={() => moveTournament(idx, 1)} disabled={idx === (draft.events.items.length - 1)}>↓</button>
-                    <button className="sm danger" onClick={() => removeTournament(idx)}>🗑️</button>
-                  </div>
+
+                  {editTourneyIdx === idx && (
+                    <div style={{ borderTop: '1px solid var(--line)', paddingTop: 10, display: 'grid', gap: 10 }}>
+                      <div className="adm-grid-2">
+                        <div>
+                          <label>Tournament Title</label>
+                          <input
+                            value={item.title}
+                            onChange={(e) => mut((d) => { d.events.items[idx].title = e.target.value; })}
+                          />
+                        </div>
+                        <div>
+                          <label>Game Title</label>
+                          <input
+                            value={item.game}
+                            onChange={(e) => mut((d) => { d.events.items[idx].game = e.target.value; })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="adm-grid-2">
+                        <div>
+                          <label>Schedule / Date</label>
+                          <input
+                            value={item.date}
+                            onChange={(e) => mut((d) => { d.events.items[idx].date = e.target.value; })}
+                          />
+                        </div>
+                        <div>
+                          <label>Prize Pool / Meta</label>
+                          <input
+                            value={item.meta}
+                            onChange={(e) => mut((d) => { d.events.items[idx].meta = e.target.value; })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="adm-grid-2">
+                        <div>
+                          <label>Registration Link</label>
+                          <input
+                            value={item.url || ''}
+                            onChange={(e) => mut((d) => { d.events.items[idx].url = e.target.value; })}
+                          />
+                        </div>
+                        <div>
+                          <label>Poster Image (5:4 Aspect Ratio)</label>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <input
+                              placeholder="Image URL or upload"
+                              value={item.img || ''}
+                              onChange={(e) => mut((d) => { d.events.items[idx].img = e.target.value; })}
+                            />
+                            <label className="adm-upload-btn">
+                              Upload
+                              <input
+                                type="file"
+                                hidden
+                                accept="image/*"
+                                onChange={(e) => handleFileUpload(e.target.files[0], (url) => mut((d) => { d.events.items[idx].img = url; }))}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {item.img && (
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center', background: '#0b0c10', padding: 8, borderRadius: 8 }}>
+                          <img src={fixImgUrl(item.img)} alt="Poster preview" style={{ width: 100, height: 80, aspectRatio: '5 / 4', borderRadius: 6, objectFit: 'cover' }} />
+                          <div>
+                            <small style={{ color: 'var(--mut)', display: 'block' }}>Poster 5:4 Preview</small>
+                            <span style={{ fontSize: 11, color: '#4ade80' }}>✓ 5:4 Intact Ratio Active</span>
+                          </div>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                        <button className="btn fill sm" onClick={() => setEditTourneyIdx(null)}>Done Editing</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -780,7 +899,282 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
         )}
 
         {/* ========================================================= */}
-        {/* TAB 6: HERO & BRAND */}
+        {/* TAB 6: SOCIALS & FOOTER */}
+        {/* ========================================================= */}
+        {activeTab === 'socials' && (
+          <div className="adm-section">
+            {/* Created & Maintained By Section */}
+            <div className="adm-card new-form">
+              <h3>Created & Maintained By</h3>
+              <p style={{ fontSize: 13, color: 'var(--mut)', marginBottom: 8 }}>
+                Names displayed in the footer credits column. Add developers, maintainers, or guild contributors here.
+              </p>
+
+              <div className="adm-grid-2">
+                <div>
+                  <label>Name *</label>
+                  <input
+                    placeholder="e.g. Soumyadeep Roy"
+                    value={newMaintainer.name}
+                    onChange={(e) => setNewMaintainer({ ...newMaintainer, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label>Portfolio / Profile Link (Optional)</label>
+                  <input
+                    placeholder="https://github.com/..."
+                    value={newMaintainer.link}
+                    onChange={(e) => setNewMaintainer({ ...newMaintainer, link: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginTop: 8 }}>
+                <label>Role / Note (Optional, e.g. Lead Developer, Web Ops)</label>
+                <input
+                  placeholder="e.g. Lead Developer & Student Ops"
+                  value={newMaintainer.role}
+                  onChange={(e) => setNewMaintainer({ ...newMaintainer, role: e.target.value })}
+                />
+              </div>
+
+              <button className="btn fill" onClick={addMaintainer} style={{ marginTop: 10 }}>
+                + Add Maintainer Name
+              </button>
+
+              <div className="adm-list-header" style={{ marginTop: 16 }}>
+                <h4>Active Maintainers ({draft.maintainers?.length || 0})</h4>
+              </div>
+
+              <div className="adm-items-list">
+                {draft.maintainers?.map((m, idx) => (
+                  <div key={idx} className="adm-item-card" style={{ gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <b>{m.name}</b>
+                      {m.role && <div style={{ fontSize: 12, color: 'var(--red)' }}>{m.role}</div>}
+                      {m.link && <small style={{ color: 'var(--mut)' }}>{m.link}</small>}
+                    </div>
+                    <div className="adm-item-controls">
+                      {m.link && (
+                        <a className="sm" href={m.link} target="_blank" rel="noopener noreferrer">
+                          Test
+                        </a>
+                      )}
+                      <button className="sm danger" onClick={() => mut((d) => d.maintainers.splice(idx, 1))}>
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Social Media Handles */}
+            <div className="adm-card">
+              <h3>Social Media & Community Handles</h3>
+              <p style={{ fontSize: 13, color: 'var(--mut)', marginBottom: 8 }}>
+                Add your guild's official Discord, Instagram, YouTube, Twitch, WhatsApp, and other links. These will appear in the Join section and Footer.
+              </p>
+
+              <div className="adm-grid-2">
+                <div>
+                  <label>Platform Preset</label>
+                  <select
+                    value={newSocial.t}
+                    onChange={(e) => setNewSocial({ ...newSocial, t: e.target.value })}
+                  >
+                    <option value="Discord">Discord (Community Server)</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="YouTube">YouTube</option>
+                    <option value="Twitch">Twitch</option>
+                    <option value="WhatsApp">WhatsApp Community</option>
+                    <option value="X (Twitter)">X / Twitter</option>
+                    <option value="LinkedIn">LinkedIn</option>
+                    <option value="GitHub">GitHub</option>
+                    <option value="Custom">Custom Platform...</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Profile / Invite URL</label>
+                  <input
+                    placeholder="https://discord.gg/... or https://instagram.com/..."
+                    value={newSocial.u}
+                    onChange={(e) => setNewSocial({ ...newSocial, u: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {newSocial.t === 'Custom' && (
+                <div style={{ marginTop: 8 }}>
+                  <label>Custom Platform Label</label>
+                  <input
+                    placeholder="e.g. Steam Group, Reddit, etc."
+                    value={newSocial.customName || ''}
+                    onChange={(e) => setNewSocial({ ...newSocial, customName: e.target.value })}
+                  />
+                </div>
+              )}
+
+              <button className="btn fill" onClick={addSocial} style={{ marginTop: 10 }}>
+                + Add Social Handle
+              </button>
+
+              <div className="adm-list-header" style={{ marginTop: 16 }}>
+                <h4>Active Social Links ({draft.socials?.length || 0})</h4>
+              </div>
+
+              <div className="adm-items-list">
+                {draft.socials?.map((soc, idx) => (
+                  <div key={idx} className="adm-item-card" style={{ gap: 12 }}>
+                    <div className="adm-grid-2" style={{ flex: 1, gap: 10 }}>
+                      <div>
+                        <label>Platform Name</label>
+                        <input
+                          value={soc.t}
+                          onChange={(e) => mut((d) => { d.socials[idx].t = e.target.value; })}
+                        />
+                      </div>
+                      <div>
+                        <label>Profile / Channel URL</label>
+                        <input
+                          value={soc.u}
+                          placeholder="https://..."
+                          onChange={(e) => mut((d) => { d.socials[idx].u = e.target.value; })}
+                        />
+                      </div>
+                    </div>
+                    <div className="adm-item-controls">
+                      {soc.u && soc.u !== '#' && (
+                        <a className="sm" href={soc.u} target="_blank" rel="noopener noreferrer" title="Test link">
+                          Test
+                        </a>
+                      )}
+                      <button className="sm danger" onClick={() => mut((d) => d.socials.splice(idx, 1))}>
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Join Section CTA Configuration */}
+            <div className="adm-card">
+              <h3>Join Section ("Be A Part Of UGG")</h3>
+              <div className="adm-grid-2">
+                <div>
+                  <label>Title Prefix</label>
+                  <input
+                    value={draft.cta?.title || ''}
+                    onChange={(e) => mut((d) => { if (!d.cta) d.cta = {}; d.cta.title = e.target.value; })}
+                  />
+                </div>
+                <div>
+                  <label>Accent Title (Red)</label>
+                  <input
+                    value={draft.cta?.accent || ''}
+                    onChange={(e) => mut((d) => { if (!d.cta) d.cta = {}; d.cta.accent = e.target.value; })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginTop: 8 }}>
+                <label>Rotating Badge Words (e.g. Die, Respawn, Play)</label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                  {draft.cta?.words?.map((w, idx) => (
+                    <span key={idx} className="adm-word-chip">
+                      {w}
+                      <button onClick={() => mut((d) => d.cta.words.splice(idx, 1))}>×</button>
+                    </span>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    placeholder="Add word (e.g. Die, Respawn, Play)"
+                    value={newWord}
+                    onChange={(e) => setNewWord(e.target.value)}
+                  />
+                  <button
+                    className="sm"
+                    onClick={() => {
+                      if (!newWord.trim()) return;
+                      mut((d) => {
+                        if (!d.cta) d.cta = {};
+                        if (!d.cta.words) d.cta.words = [];
+                        d.cta.words.push(newWord.trim());
+                      });
+                      setNewWord('');
+                    }}
+                  >
+                    + Add Word
+                  </button>
+                </div>
+              </div>
+
+              <div className="adm-grid-2" style={{ marginTop: 8 }}>
+                <div>
+                  <label>Primary Button Text</label>
+                  <input
+                    value={draft.cta?.btn || ''}
+                    placeholder="Join the Community"
+                    onChange={(e) => mut((d) => { if (!d.cta) d.cta = {}; d.cta.btn = e.target.value; })}
+                  />
+                </div>
+                <div>
+                  <label>Primary Button URL (e.g. Discord Link)</label>
+                  <input
+                    value={draft.cta?.url || ''}
+                    placeholder="https://discord.gg/..."
+                    onChange={(e) => mut((d) => { if (!d.cta) d.cta = {}; d.cta.url = e.target.value; })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Information */}
+            <div className="adm-card">
+              <h3>Footer & Organization Details</h3>
+              <div className="adm-grid-2">
+                <div>
+                  <label>Campus / Location</label>
+                  <input
+                    value={draft.footer?.location || ''}
+                    placeholder="UEM Kolkata"
+                    onChange={(e) => mut((d) => { if (!d.footer) d.footer = {}; d.footer.location = e.target.value; })}
+                  />
+                </div>
+                <div>
+                  <label>Club Tagline</label>
+                  <input
+                    value={draft.footer?.tagline || ''}
+                    placeholder="Play. Compete. Create. Connect."
+                    onChange={(e) => mut((d) => { if (!d.footer) d.footer = {}; d.footer.tagline = e.target.value; })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginTop: 8 }}>
+                <label>Footer About Summary</label>
+                <textarea
+                  rows={2}
+                  value={draft.footer?.about || ''}
+                  onChange={(e) => mut((d) => { if (!d.footer) d.footer = {}; d.footer.about = e.target.value; })}
+                />
+              </div>
+
+              <div style={{ marginTop: 8 }}>
+                <label>Copyright Line</label>
+                <input
+                  value={draft.footer?.copy || ''}
+                  onChange={(e) => mut((d) => { if (!d.footer) d.footer = {}; d.footer.copy = e.target.value; })}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB 7: HERO & BRAND */}
         {/* ========================================================= */}
         {activeTab === 'hero' && (
           <div className="adm-section">

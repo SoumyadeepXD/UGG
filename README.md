@@ -2,6 +2,8 @@
 
 Official web portal and full-stack management system for **UGG (UEM Gamerz Guild)**, premier collegiate gaming & esports guild of the **University of Engineering & Management, Kolkata**.
 
+> 📖 **Handover Documentation:** For a complete file map and developer guide on where to change any frontend feature, see [**DEVELOPER_GUIDE.md**](./DEVELOPER_GUIDE.md).
+
 ---
 
 ## ⚡ Quick Start
@@ -62,7 +64,12 @@ Access the full admin dashboard by clicking the **"Admin"** button in the footer
 - **Add Sponsors:** Brand name, logo upload/URL, and official website URL.
 - **Sponsorship CTA:** Update inquiries email and custom link.
 
-### ⚡ 6. Hero & Brand Identity
+### 🌐 6. Social Media Handles & Footer Details
+- **Manage Handles:** Add or update Discord, Instagram, YouTube, Twitch, WhatsApp, X (Twitter), LinkedIn, or custom platforms with direct link testing.
+- **Join Section:** Live interactive social pills in the `#join` community section.
+- **Footer Details:** Configure location, club tagline, copyright text, and footer summary.
+
+### ⚡ 7. Hero & Brand Identity
 - **Brand Names & Subtitles:** Customize guild name, subtext, and institute logos.
 - **Rotating Keywords:** Add or remove headline dynamic words (e.g. *PLAY.*, *COMPETE.*, *CREATE.*, *CONQUER.*).
 - **Hero Background:** Upload background video (MP4) or toggle dynamic cyberpunk canvas particle grid.
