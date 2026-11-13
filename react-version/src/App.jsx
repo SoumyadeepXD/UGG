@@ -230,7 +230,7 @@ function Member({ m, i, logo }) {
   return (
     <R className="mem" style={{ '--i': i }} onPointerMove={tilt} onPointerLeave={reset}>
       <div className="ph">
-        {m.img ? <img src={fixImgUrl(m.img)} alt={m.name} /> : logo ? <img className="wm" src={fixImgUrl(logo)} alt="" /> : <b>{(m.name || '?')[0]}</b>}
+        {m.img ? <img src={fixImgUrl(m.img)} alt={m.name} loading="lazy" decoding="async" /> : logo ? <img className="wm" src={fixImgUrl(logo)} alt="" loading="lazy" decoding="async" /> : <b>{(m.name || '?')[0]}</b>}
       </div>
       <span className="ix">{pad(i)}</span>
       <div className="inf">
@@ -371,7 +371,7 @@ export default function App() {
             {c.events.items.map((x, i) => (
               <R key={i} as="a" className={`ev ${x.status === 'live' ? 'live' : ''}`} style={{ '--i': i }} href={x.url || '#timeline'} {...ext(x.url)}>
                 {x.img ? (
-                  <img src={fixImgUrl(x.img)} alt={x.title || 'Tournament Poster'} className="ev-img" />
+                  <img src={fixImgUrl(x.img)} alt={x.title || 'Tournament Poster'} className="ev-img" loading="lazy" decoding="async" />
                 ) : (
                   <div className="ev-fallback">
                     <span className="ev-fallback-tag">{x.game || 'UGG'}</span>
@@ -438,7 +438,7 @@ export default function App() {
             <div>
               {[...tick, ...tick].map((x, i) => (
                 <a key={i} href={x.url} aria-label={x.name} {...ext(x.url)}>
-                  {x.logo ? <img src={fixImgUrl(x.logo)} alt={x.name} /> : <span>{x.name}</span>}
+                  {x.logo ? <img src={fixImgUrl(x.logo)} alt={x.name} loading="lazy" decoding="async" /> : <span>{x.name}</span>}
                 </a>
               ))}
             </div>
