@@ -33,6 +33,7 @@ jobs:
           npm run build
           cp ../standalone.html dist/standalone.html 2>/dev/null || true
           cp dist/index.html dist/404.html 2>/dev/null || true
+          cp ../backend/data/content.json dist/content.json 2>/dev/null || true
 
       - name: Deploy to gh-pages branch
         uses: JamesIves/github-pages-deploy-action@v4

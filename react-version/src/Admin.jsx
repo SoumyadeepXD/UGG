@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DEF } from './content.js';
-import { merge, sha, uploadFile, syncGoogleSheet, checkBackendStatus, fixImgUrl } from './util.js';
+import { merge, sha, uploadFile, syncGoogleSheet, checkBackendStatus, fixImgUrl, getApiHost, setCustomApiHost, publishToGitHub, publishViaBackend } from './util.js';
 
 const STATUS_OPTIONS = [
   { val: 'live', label: '🔴 Live Now' },
@@ -95,6 +95,55 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
   };
 
   const [newMaintainer, setNewMaintainer] = useState({ name: '', role: '', link: '' });
+
+  const [ghToken, setGhToken] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('ugg-gh-token') || '' : ''));
+  const [customApi, setCustomApi] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('ugg-api-host') || '' : ''));
+  const [publishing, setPublishing] = useState(false);
+  const [publishMessage, setPublishMessage] = useState('');
+
+  const handlePublishGitHub = async () => {
+    if (!ghToken.trim()) {
+      return toast('Please enter your GitHub Personal Access Token to publish.');
+    }
+    setPublishing(true);
+    setPublishMessage('Publishing updates to GitHub repository...');
+    try {
+      localStorage.setItem('ugg-gh-token', ghToken.trim());
+      await publishToGitHub(ghToken, draft);
+      setPublishMessage('Success! GitHub Pages is building now. Changes will be live for everyone in ~30s.');
+      toast('🚀 Published directly to GitHub! Updating live site.');
+      onSave(draft);
+    } catch (err) {
+      setPublishMessage('');
+      toast(`Publish failed: ${err.message}`);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handlePublishLocal = async () => {
+    setPublishing(true);
+    setPublishMessage('Building site & pushing commit to GitHub...');
+    try {
+      const res = await publishViaBackend(draft);
+      setPublishMessage('Success! Pushed to GitHub. Live for all users in ~30s.');
+      toast(res.message || '🚀 Published live to GitHub!');
+      onSave(draft);
+    } catch (err) {
+      setPublishMessage('');
+      toast(`Publish failed: ${err.message}`);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handleSaveCustomApi = () => {
+    setCustomApiHost(customApi);
+    checkBackendStatus().then((online) => {
+      setServerOnline(online);
+      toast(online ? '🟢 Connected to Cloud Backend!' : '⚠️ Server URL saved, but unreachable at the moment.');
+    });
+  };
 
   const addMaintainer = () => {
     if (!newMaintainer.name.trim()) return toast('Please enter a name.');
@@ -349,6 +398,22 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
 
       {/* Tab Body */}
       <div className="adm-body">
+        {!serverOnline && (
+          <div className="adm-publish-banner" style={{ background: 'rgba(234,179,8,.1)', border: '1px solid rgba(234,179,8,.35)', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <b style={{ color: '#facc15', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                🟡 Browser Preview Mode (Saved to your device only)
+              </b>
+              <p style={{ margin: '3px 0 0', fontSize: 12, color: '#ddd' }}>
+                To make your updates visible to <strong>all visitors worldwide</strong> on GitHub Pages, publish to GitHub or connect your cloud server.
+              </p>
+            </div>
+            <button className="btn fill sm" onClick={() => setActiveTab('sync')} style={{ whiteSpace: 'nowrap' }}>
+              🚀 Make Changes Public →
+            </button>
+          </div>
+        )}
+
         {/* ========================================================= */}
         {/* TAB 1: TOURNAMENTS */}
         {/* ========================================================= */}
@@ -1350,6 +1415,103 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
         {/* ========================================================= */}
         {activeTab === 'sync' && (
           <div className="adm-section">
+            {/* PUBLIC PUBLISHING SECTION */}
+            <div className="adm-card new-form" style={{ borderColor: 'var(--red)', background: 'linear-gradient(180deg,#1c0e12,#111218 90%)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                <h3 style={{ margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  🌐 Publish Changes Live to Everyone
+                </h3>
+                <span className={`adm-status-badge ${serverOnline ? 'online' : 'local'}`}>
+                  {serverOnline ? '🟢 Server Connected' : '🟡 In-Browser Mode'}
+                </span>
+              </div>
+              <p style={{ fontSize: 13, color: '#ccc', margin: '4px 0 10px' }}>
+                Make your tournaments, posters, team members, and links visible to <strong>all visitors on the public website</strong> (not just on your device).
+              </p>
+
+              {serverOnline ? (
+                /* Mode 1: Local / Cloud Node Server is Running */
+                <div style={{ background: 'rgba(34,197,94,.08)', border: '1px solid rgba(34,197,94,.25)', borderRadius: 8, padding: 12 }}>
+                  <b style={{ color: '#4ade80', fontSize: 13 }}>🟢 Live Backend Server Connected</b>
+                  <p style={{ fontSize: 12, color: '#ddd', margin: '4px 0 10px' }}>
+                    Your backend server is active. Clicking below automatically builds the latest static files, commits your updates, and pushes them directly to GitHub Pages for all users.
+                  </p>
+                  <button
+                    className="btn fill sm"
+                    onClick={handlePublishLocal}
+                    disabled={publishing}
+                    style={{ minWidth: 200 }}
+                  >
+                    {publishing ? '⏳ Building & Pushing to GitHub...' : '🚀 1-Click Publish to GitHub Pages'}
+                  </button>
+                  {publishMessage && (
+                    <p style={{ fontSize: 12, color: '#4ade80', marginTop: 8, fontWeight: 600 }}>
+                      {publishMessage}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                /* Mode 2: Static GitHub Pages In-Browser Direct Publish */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ background: 'rgba(255,255,255,.04)', border: '1px solid var(--line)', borderRadius: 8, padding: 12 }}>
+                    <b style={{ color: '#fff', fontSize: 13 }}>Option 1: Direct GitHub Sync (Works directly on GitHub Pages!)</b>
+                    <p style={{ fontSize: 12, color: 'var(--mut)', margin: '4px 0 8px' }}>
+                      Publish updates directly to the <code>SoumyadeepXD/UGG</code> repository without needing a terminal or local server.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <input
+                        type="password"
+                        placeholder="Paste your GitHub Personal Access Token (ghp_...)"
+                        value={ghToken}
+                        onChange={(e) => setGhToken(e.target.value)}
+                        style={{ flex: 1, minWidth: 240 }}
+                      />
+                      <button
+                        className="btn fill sm"
+                        onClick={handlePublishGitHub}
+                        disabled={publishing}
+                      >
+                        {publishing ? '⏳ Publishing...' : '🚀 Publish Live to Everyone'}
+                      </button>
+                    </div>
+                    <div style={{ marginTop: 6, fontSize: 11.5 }}>
+                      <a
+                        href="https://github.com/settings/tokens/new?scopes=repo&description=UGG+Admin+Portal"
+                        target="_blank"
+                        rel="noopener"
+                        style={{ color: 'var(--red)', textDecoration: 'underline' }}
+                      >
+                        👉 Click here to generate a GitHub Token with "repo" scope (Takes 15 seconds)
+                      </a>
+                    </div>
+                    {publishMessage && (
+                      <p style={{ fontSize: 12, color: '#4ade80', marginTop: 8, fontWeight: 600 }}>
+                        {publishMessage}
+                      </p>
+                    )}
+                  </div>
+
+                  <div style={{ background: 'rgba(255,255,255,.04)', border: '1px solid var(--line)', borderRadius: 8, padding: 12 }}>
+                    <b style={{ color: '#fff', fontSize: 13 }}>Option 2: Connect a Cloud Backend (Render / Railway)</b>
+                    <p style={{ fontSize: 12, color: 'var(--mut)', margin: '4px 0 8px' }}>
+                      If you deployed <code>backend/server.js</code> to Render or Railway, enter your HTTPS backend URL here to sync live in real-time.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <input
+                        placeholder="https://ugg-backend.onrender.com"
+                        value={customApi}
+                        onChange={(e) => setCustomApi(e.target.value)}
+                        style={{ flex: 1, minWidth: 240 }}
+                      />
+                      <button className="sm" onClick={handleSaveCustomApi}>
+                        Connect Server
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="adm-card">
               <h3>📊 Google Sheets Live Synchronization</h3>
               <p style={{ fontSize: 13, color: 'var(--mut)', marginBottom: 8 }}>

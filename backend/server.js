@@ -115,6 +115,50 @@ app.post('/api/content', (req, res) => {
   }
 });
 
+// 2b. Publish & Push to GitHub Pages
+app.post('/api/publish', async (req, res) => {
+  try {
+    const newContent = req.body;
+    if (newContent && typeof newContent === 'object' && Object.keys(newContent).length > 0) {
+      writeContent(newContent);
+    }
+
+    const rootDir = path.join(__dirname, '..');
+    const contentJsPath = path.join(rootDir, 'react-version', 'src', 'content.js');
+    const contentData = readContent();
+    const contentJsCode = `export const DEF = ${JSON.stringify(contentData, null, 2)};\n`;
+
+    try {
+      fs.writeFileSync(contentJsPath, contentJsCode, 'utf8');
+      fs.writeFileSync(path.join(rootDir, 'react-version', 'public', 'content.json'), JSON.stringify(contentData, null, 2), 'utf8');
+      fs.writeFileSync(path.join(rootDir, 'content.json'), JSON.stringify(contentData, null, 2), 'utf8');
+    } catch (e) {
+      console.warn('[UGG Backend] Could not sync static files:', e);
+    }
+
+    const { exec } = await import('child_process');
+    const util = await import('util');
+    const execPromise = util.promisify(exec);
+
+    console.log('[UGG Backend] Running build before git push...');
+    await execPromise('npm run build', { cwd: rootDir });
+
+    console.log('[UGG Backend] Committing and pushing to GitHub...');
+    await execPromise('git add -A && git commit -m "chore(content): update website content via admin portal" && git push origin main', { cwd: rootDir });
+
+    return res.json({
+      success: true,
+      message: 'Published successfully to GitHub! GitHub Pages will update in ~30 seconds.',
+    });
+  } catch (err) {
+    console.error('[UGG Backend] Error during publish:', err);
+    return res.status(500).json({
+      error: err.message || 'Failed to publish to GitHub',
+      details: err.stderr || err.stdout,
+    });
+  }
+});
+
 // 3. Tournaments / Events Endpoints
 app.get('/api/tournaments', (req, res) => {
   const content = readContent();

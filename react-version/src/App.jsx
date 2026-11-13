@@ -526,7 +526,7 @@ export default function App() {
             setSaved(d);
             setLive(d);
             const res = await saveToBackend(d);
-            toast(res.backend ? 'Saved to server & published!' : 'Saved locally in browser');
+            toast(res.backend ? 'Saved to server!' : 'Saved in browser preview. Click "Make Changes Public" to publish live.');
           }}
           onClose={() => { setLive(saved); setPanel(false); }}
           onLogout={() => { setAuthed(false); sessionStorage.removeItem('uggA'); setLive(saved); setPanel(false); }}
