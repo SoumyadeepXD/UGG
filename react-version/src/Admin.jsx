@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DEF } from './content.js';
-import { merge, sha, uploadFile, syncGoogleSheet, checkBackendStatus, fixImgUrl, getApiHost, setCustomApiHost, publishToGitHub, publishViaBackend } from './util.js';
+import { merge, sha, uploadFile, syncGoogleSheet, checkBackendStatus, wakeUpBackend, fixImgUrl, getApiHost, setCustomApiHost, publishToGitHub, publishViaBackend } from './util.js';
 
 const STATUS_OPTIONS = [
   { val: 'live', label: '🔴 Live Now' },
@@ -40,6 +40,7 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
   const [open, setOpen] = useState(false);
   const [serverOnline, setServerOnline] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Tournament Form State
   const [newTourney, setNewTourney] = useState({
@@ -161,8 +162,15 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
 
   useEffect(() => {
     const r = requestAnimationFrame(() => setOpen(true));
-    checkBackendStatus().then(setServerOnline);
-    return () => cancelAnimationFrame(r);
+    wakeUpBackend();
+    checkBackendStatus(8000).then(setServerOnline);
+    const poll = setInterval(() => {
+      checkBackendStatus(8000).then(setServerOnline);
+    }, 12000);
+    return () => {
+      cancelAnimationFrame(r);
+      clearInterval(poll);
+    };
   }, []);
 
   const mut = (fn) => {
@@ -310,15 +318,24 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
 
   // ----------------- SAVE & BACKUP -----------------
   const handleSave = async () => {
-    const d = structuredClone(draft);
-    if (d.admin.newPassword) {
-      if (d.admin.newPassword.length < 6) return toast('Use at least 6 characters for password.');
-      d.admin.hash = await sha(d.admin.newPassword);
-      toast('Admin password updated');
+    if (saving) return;
+    setSaving(true);
+    try {
+      const d = structuredClone(draft);
+      if (d.admin.newPassword) {
+        if (d.admin.newPassword.length < 6) {
+          setSaving(false);
+          return toast('Use at least 6 characters for password.');
+        }
+        d.admin.hash = await sha(d.admin.newPassword);
+        toast('Admin password updated');
+      }
+      d.admin.newPassword = '';
+      setDraft(d);
+      await onSave(d);
+    } finally {
+      setSaving(false);
     }
-    d.admin.newPassword = '';
-    setDraft(d);
-    onSave(d);
   };
 
   const exportJson = () => {
@@ -361,12 +378,12 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <b className="adm-title">🎮 UGG CONTROL CENTER</b>
           <span className={`adm-status-badge ${serverOnline ? 'online' : 'local'}`}>
-            {serverOnline === null ? 'Checking...' : serverOnline ? '🟢 Server Online' : '🟡 Local Mode'}
+            {serverOnline === null ? '⏳ Checking Cloud...' : serverOnline ? '🟢 Cloud Server Online' : '🟡 Server Reconnecting...'}
           </span>
         </div>
         <div className="adm-header-actions">
-          <button className="btn fill sm" onClick={handleSave} disabled={uploading}>
-            💾 Save & Publish
+          <button className="btn fill sm" onClick={handleSave} disabled={uploading || saving}>
+            {saving ? '⏳ Saving & Publishing...' : '💾 Save & Publish'}
           </button>
           <button className="sm" onClick={onClose}>Close</button>
           <button className="sm" onClick={onLogout}>Log out</button>
@@ -398,19 +415,38 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
 
       {/* Tab Body */}
       <div className="adm-body">
-        {!serverOnline && (
+        {serverOnline ? (
+          <div className="adm-publish-banner" style={{ background: 'rgba(34,197,94,.08)', border: '1px solid rgba(34,197,94,.25)', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <b style={{ color: '#4ade80', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                🟢 Render Cloud Server Connected
+              </b>
+              <p style={{ margin: '3px 0 0', fontSize: 12, color: '#ddd' }}>
+                All edits saved here are stored in the cloud and are live immediately for <strong>all visitors on all devices</strong>.
+              </p>
+            </div>
+            <button className="btn fill sm" onClick={handleSave} disabled={saving} style={{ whiteSpace: 'nowrap' }}>
+              {saving ? '⏳ Saving...' : '💾 Save & Publish'}
+            </button>
+          </div>
+        ) : (
           <div className="adm-publish-banner" style={{ background: 'rgba(234,179,8,.1)', border: '1px solid rgba(234,179,8,.35)', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 220 }}>
               <b style={{ color: '#facc15', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                🟡 Browser Preview Mode (Saved to your device only)
+                ⏳ Connecting to Render Cloud Server
               </b>
               <p style={{ margin: '3px 0 0', fontSize: 12, color: '#ddd' }}>
-                To make your updates visible to <strong>all visitors worldwide</strong> on GitHub Pages, publish to GitHub or connect your cloud server.
+                Render's free tier sleeps when inactive and wakes up in ~30s. Clicking Save will save locally and wake the cloud server up automatically.
               </p>
             </div>
-            <button className="btn fill sm" onClick={() => setActiveTab('sync')} style={{ whiteSpace: 'nowrap' }}>
-              🚀 Make Changes Public →
-            </button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="sm" onClick={() => { wakeUpBackend(); checkBackendStatus(12000).then(setServerOnline); toast('Pinging cloud server...'); }} style={{ whiteSpace: 'nowrap' }}>
+                🔄 Ping Server
+              </button>
+              <button className="btn fill sm" onClick={handleSave} disabled={saving} style={{ whiteSpace: 'nowrap' }}>
+                {saving ? '⏳ Saving...' : '💾 Save & Publish'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -1434,16 +1470,25 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
                 <div style={{ background: 'rgba(34,197,94,.08)', border: '1px solid rgba(34,197,94,.25)', borderRadius: 8, padding: 12 }}>
                   <b style={{ color: '#4ade80', fontSize: 13 }}>🟢 Live Backend Server Connected</b>
                   <p style={{ fontSize: 12, color: '#ddd', margin: '4px 0 10px' }}>
-                    Your backend server is active. Clicking below automatically builds the latest static files, commits your updates, and pushes them directly to GitHub Pages for all users.
+                    Your cloud backend is active. Clicking "Save & Publish" anywhere in the admin panel immediately updates tournaments, posters, and team members for all visitors worldwide.
                   </p>
-                  <button
-                    className="btn fill sm"
-                    onClick={handlePublishLocal}
-                    disabled={publishing}
-                    style={{ minWidth: 200 }}
-                  >
-                    {publishing ? '⏳ Building & Pushing to GitHub...' : '🚀 1-Click Publish to GitHub Pages'}
-                  </button>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      className="btn fill sm"
+                      onClick={handleSave}
+                      disabled={saving}
+                      style={{ minWidth: 180 }}
+                    >
+                      {saving ? '⏳ Saving & Publishing...' : '💾 Save & Publish to Cloud'}
+                    </button>
+                    <button
+                      className="sm"
+                      onClick={handlePublishLocal}
+                      disabled={publishing}
+                    >
+                      {publishing ? '⏳ Syncing...' : '🚀 Trigger GitHub Pages Rebuild'}
+                    </button>
+                  </div>
                   {publishMessage && (
                     <p style={{ fontSize: 12, color: '#4ade80', marginTop: 8, fontWeight: 600 }}>
                       {publishMessage}

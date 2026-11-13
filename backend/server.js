@@ -82,6 +82,63 @@ function writeContent(data) {
   }
 }
 
+// Helper: sync content to GitHub repository via REST API (if GITHUB_TOKEN configured)
+async function syncToGitHub(contentData) {
+  const token = (process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '').trim();
+  if (!token) {
+    return { synced: false, reason: 'no_token' };
+  }
+
+  const repo = process.env.GITHUB_REPO || 'SoumyadeepXD/UGG';
+  const branch = process.env.GITHUB_BRANCH || 'main';
+  const filesToSync = [
+    'backend/data/content.json',
+    'react-version/public/content.json',
+    'content.json'
+  ];
+
+  const contentStr = JSON.stringify(contentData, null, 2);
+  const base64Content = Buffer.from(contentStr).toString('base64');
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'Content-Type': 'application/json',
+    'User-Agent': 'UGG-Backend-Sync',
+  };
+
+  const results = [];
+  for (const filePath of filesToSync) {
+    try {
+      let sha = undefined;
+      const getRes = await fetch(`https://api.github.com/repos/${repo}/contents/${filePath}?ref=${branch}&_t=${Date.now()}`, { headers });
+      if (getRes.ok) {
+        const fileInfo = await getRes.json();
+        sha = fileInfo.sha;
+      }
+
+      const putRes = await fetch(`https://api.github.com/repos/${repo}/contents/${filePath}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          message: `chore(content): update ${filePath} via UGG Admin Portal [skip ci]`,
+          content: base64Content,
+          sha,
+          branch,
+        }),
+      });
+
+      results.push({ path: filePath, ok: putRes.ok, status: putRes.status });
+    } catch (err) {
+      console.warn(`[UGG Backend] Error committing ${filePath} to GitHub:`, err.message);
+      results.push({ path: filePath, ok: false, error: err.message });
+    }
+  }
+
+  const success = results.some((r) => r.ok);
+  return { synced: success, details: results };
+}
+
 /* ========================================================
    API ROUTES
 ======================================================== */
@@ -91,6 +148,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
     project: 'UGG (UEM Gamerz Guild) Backend',
+    githubSyncEnabled: !!(process.env.GITHUB_TOKEN || process.env.GH_TOKEN),
     timestamp: new Date().toISOString(),
   });
 });
@@ -101,18 +159,31 @@ app.get('/api/content', (req, res) => {
   res.json(content);
 });
 
-app.post('/api/content', (req, res) => {
+app.post('/api/content', async (req, res) => {
   const newContent = req.body;
   if (!newContent || typeof newContent !== 'object') {
     return res.status(400).json({ error: 'Invalid content data payload.' });
   }
 
   const ok = writeContent(newContent);
-  if (ok) {
-    res.json({ success: true, message: 'Content saved successfully.', content: newContent });
-  } else {
-    res.status(500).json({ error: 'Failed to write content to disk.' });
+  if (!ok) {
+    return res.status(500).json({ error: 'Failed to write content to disk.' });
   }
+
+  // Attempt GitHub commit if token is configured in environment
+  let ghSync = { synced: false };
+  try {
+    ghSync = await syncToGitHub(newContent);
+  } catch (err) {
+    console.warn('[UGG Backend] GitHub sync error:', err.message);
+  }
+
+  res.json({
+    success: true,
+    message: 'Content saved successfully.',
+    githubSynced: ghSync.synced,
+    content: newContent,
+  });
 });
 
 // 2b. Publish & Push to GitHub Pages
@@ -122,10 +193,24 @@ app.post('/api/publish', async (req, res) => {
     if (newContent && typeof newContent === 'object' && Object.keys(newContent).length > 0) {
       writeContent(newContent);
     }
+    const contentData = readContent();
 
+    // 1. If GITHUB_TOKEN is available on the server (e.g. Render environment), sync via REST API!
+    const token = (process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '').trim();
+    if (token) {
+      console.log('[UGG Backend] Publishing to GitHub via REST API token...');
+      const ghRes = await syncToGitHub(contentData);
+      if (ghRes.synced) {
+        return res.json({
+          success: true,
+          message: 'Published successfully to GitHub via API! GitHub Pages is building now (~30s).',
+        });
+      }
+    }
+
+    // 2. Otherwise, if running locally in developer workspace, try local git push
     const rootDir = path.join(__dirname, '..');
     const contentJsPath = path.join(rootDir, 'react-version', 'src', 'content.js');
-    const contentData = readContent();
     const contentJsCode = `export const DEF = ${JSON.stringify(contentData, null, 2)};\n`;
 
     try {
@@ -133,22 +218,29 @@ app.post('/api/publish', async (req, res) => {
       fs.writeFileSync(path.join(rootDir, 'react-version', 'public', 'content.json'), JSON.stringify(contentData, null, 2), 'utf8');
       fs.writeFileSync(path.join(rootDir, 'content.json'), JSON.stringify(contentData, null, 2), 'utf8');
     } catch (e) {
-      console.warn('[UGG Backend] Could not sync static files:', e);
+      console.warn('[UGG Backend] Could not sync static files locally:', e.message);
     }
 
-    const { exec } = await import('child_process');
-    const util = await import('util');
-    const execPromise = util.promisify(exec);
+    if (fs.existsSync(path.join(rootDir, '.git'))) {
+      const { exec } = await import('child_process');
+      const util = await import('util');
+      const execPromise = util.promisify(exec);
 
-    console.log('[UGG Backend] Running build before git push...');
-    await execPromise('npm run build', { cwd: rootDir });
+      console.log('[UGG Backend] Running build before git push...');
+      await execPromise('npm run build', { cwd: rootDir });
 
-    console.log('[UGG Backend] Committing and pushing to GitHub...');
-    await execPromise('git add -A && git commit -m "chore(content): update website content via admin portal" && git push origin main', { cwd: rootDir });
+      console.log('[UGG Backend] Committing and pushing to GitHub...');
+      await execPromise('git add -A && git commit -m "chore(content): update website content via admin portal" && git push origin main', { cwd: rootDir });
+
+      return res.json({
+        success: true,
+        message: 'Published successfully to GitHub! GitHub Pages will update in ~30 seconds.',
+      });
+    }
 
     return res.json({
       success: true,
-      message: 'Published successfully to GitHub! GitHub Pages will update in ~30 seconds.',
+      message: 'Saved to cloud server! Add GITHUB_TOKEN to Render environment to enable automatic GitHub Pages builds.',
     });
   } catch (err) {
     console.error('[UGG Backend] Error during publish:', err);

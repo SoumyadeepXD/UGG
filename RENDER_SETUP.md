@@ -53,6 +53,22 @@ You can set this up using either **Method A (Blueprint - 1 click)** or **Method 
 
 ---
 
+## ⚡ Optional: Enable Automated GitHub Pages Auto-Sync
+If you want saves in the Admin Portal to **also automatically commit to the GitHub repository and rebuild GitHub Pages**, add this one environment variable on Render:
+1. In your Render Dashboard, click your `ugg-backend` service → **Environment**.
+2. Click **Add Environment Variable**:
+   - **Key:** `GITHUB_TOKEN`
+   - **Value:** Your GitHub Personal Access Token (with `repo` or `contents:write` permission).
+3. Click **Save Changes**.
+
+Now, whenever ANY club coordinator clicks "Save & Publish" in the Admin Portal:
+1. The backend saves to Render immediately (live for all visitors in seconds).
+2. The backend also commits the updated content directly to GitHub.
+3. GitHub Pages automatically rebuilds via GitHub Actions!
+Future coordinators never need to know the token or have GitHub accounts — Render handles it securely behind the scenes!
+
+---
+
 ## 🎉 You're Done!
 - Any coordinator can now open `https://soumyadeepxd.github.io/UGG/#admin`, log in with the admin password, and save changes.
 - All tournaments, posters, sponsors, and maintainers will be saved to the live cloud backend and visible to **all visitors worldwide in real-time**!

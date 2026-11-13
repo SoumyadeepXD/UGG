@@ -291,13 +291,20 @@ export default function App() {
   const openAdmin = () => (authed ? setPanel(true) : setLogin(true));
 
   useEffect(() => {
-    fetchBackendContent().then((d) => {
+    fetchBackendContent({
+      onCloudUpdate: (fresh) => {
+        if (fresh) {
+          setSaved(fresh);
+          setLive((curr) => (panel ? curr : fresh));
+        }
+      },
+    }).then((d) => {
       if (d) {
         setSaved(d);
         setLive(d);
       }
     });
-  }, []);
+  }, [panel]);
 
   useEffect(() => {
     const s = document.documentElement.style;
@@ -525,8 +532,17 @@ export default function App() {
           onSave={async (d) => {
             setSaved(d);
             setLive(d);
+            toast('⏳ Saving to Cloud Server...');
             const res = await saveToBackend(d);
-            toast(res.backend ? 'Saved to server!' : 'Saved in browser preview. Click "Make Changes Public" to publish live.');
+            if (res.backend) {
+              if (res.githubSynced) {
+                toast('🚀 Saved to Cloud & Synced with GitHub Pages CDN!');
+              } else {
+                toast('🟢 Saved to Cloud! Live for all visitors.');
+              }
+            } else {
+              toast('⚠️ Cloud server taking long to wake up. Saved locally.');
+            }
           }}
           onClose={() => { setLive(saved); setPanel(false); }}
           onLogout={() => { setAuthed(false); sessionStorage.removeItem('uggA'); setLive(saved); setPanel(false); }}

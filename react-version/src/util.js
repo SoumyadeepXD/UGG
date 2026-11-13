@@ -66,53 +66,76 @@ export const save = (c) => {
 };
 
 /** Checks if the backend server is reachable */
-export const checkBackendStatus = async () => {
+export const checkBackendStatus = async (timeoutMs = 5000) => {
   const host = getApiHost();
   if (!host && typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
     return false;
   }
   try {
-    const res = await fetch(`${host}/api/health`, { method: 'GET', signal: AbortSignal.timeout(2000) });
+    const res = await fetch(`${host}/api/health`, { method: 'GET', signal: AbortSignal.timeout(timeoutMs) });
     return res.ok;
   } catch {
     return false;
   }
 };
 
-/** Fetches latest content from: 1) Online API -> 2) Static content.json -> 3) LocalStorage -> 4) DEF */
-export const fetchBackendContent = async () => {
+/** Dispatches a background ping to wake Render backend if it's sleeping */
+export const wakeUpBackend = () => {
   const host = getApiHost();
+  if (!host) return;
+  fetch(`${host}/api/health`, { method: 'GET', signal: AbortSignal.timeout(45000) }).catch(() => {});
+};
 
-  // 1. Try configured backend API first (local or remote)
-  if (host || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))) {
-    try {
-      const res = await fetch(`${host}/api/content`, { signal: AbortSignal.timeout(3000) });
-      if (res.ok) {
-        const data = await res.json();
-        const merged = merge(DEF, data);
-        save(merged);
-        return merged;
-      }
-    } catch {
-      console.info('Backend API unreachable, checking static content.json...');
-    }
-  }
+/**
+ * Loads content with Stale-While-Revalidate (SWR):
+ * 1. Immediately returns cached or static content so page renders in <100ms.
+ * 2. Asynchronously fetches from the online backend (Render) with generous timeout (35s)
+ *    to handle cold-boot.
+ * 3. If fresh data is received from cloud, calls onCloudUpdate(freshData) to update UI.
+ */
+export const fetchBackendContent = async ({ onCloudUpdate } = {}) => {
+  let fastestData = null;
 
-  // 2. Try fetching static content.json directly from GitHub Pages
+  // 1. Immediately try fetching static content.json directly from GitHub Pages CDN (<100ms)
   try {
     const res = await fetch(`./content.json?_t=${Date.now()}`, { signal: AbortSignal.timeout(3000) });
     if (res.ok) {
       const data = await res.json();
-      const merged = merge(DEF, data);
-      save(merged);
-      return merged;
+      fastestData = merge(DEF, data);
+      save(fastestData);
     }
   } catch {
-    console.info('Static content.json not reachable, loading cached local storage.');
+    // Static fetch skipped or timed out
   }
 
-  // 3. Fallback to localStorage or default
-  return load();
+  // Fallback to localStorage or built-in default
+  if (!fastestData) {
+    fastestData = load();
+  }
+
+  // 2. In background: fetch latest live data from Cloud Backend (Render)
+  const host = getApiHost();
+  if (host) {
+    (async () => {
+      try {
+        const res = await fetch(`${host}/api/content?_t=${Date.now()}`, {
+          signal: AbortSignal.timeout(35000), // Allows Render up to 35s to wake up if cold-booting
+        });
+        if (res.ok) {
+          const cloudData = await res.json();
+          const merged = merge(DEF, cloudData);
+          save(merged);
+          if (typeof onCloudUpdate === 'function') {
+            onCloudUpdate(merged);
+          }
+        }
+      } catch (err) {
+        console.info('[UGG] Cloud background fetch info:', err.message);
+      }
+    })();
+  }
+
+  return fastestData;
 };
 
 /** Saves content to backend server AND localStorage */
@@ -120,20 +143,28 @@ export const saveToBackend = async (content) => {
   save(content);
   const host = getApiHost();
   let savedToBackend = false;
+  let githubSynced = false;
+  let errorMsg = '';
+
   try {
     const res = await fetch(`${host}/api/content`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(content),
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(45000), // Allow 45s for Render wake-up if asleep
     });
     if (res.ok) {
       savedToBackend = true;
+      const data = await res.json().catch(() => ({}));
+      githubSynced = !!data.githubSynced;
+    } else {
+      errorMsg = `Server error HTTP ${res.status}`;
     }
   } catch (err) {
     console.warn('Failed to sync to backend server:', err);
+    errorMsg = err.name === 'TimeoutError' ? 'Server is still waking up' : err.message;
   }
-  return { success: true, backend: savedToBackend };
+  return { success: true, backend: savedToBackend, githubSynced, error: errorMsg };
 };
 
 /** Publishes content via the local/cloud Node backend which commits & pushes to GitHub */
