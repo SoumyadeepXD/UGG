@@ -74,6 +74,7 @@ function readContent() {
 // Helper: save content
 function writeContent(data) {
   try {
+    if (!data._updatedAt) data._updatedAt = Date.now();
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
     return true;
   } catch (err) {

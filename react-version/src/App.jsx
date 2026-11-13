@@ -280,22 +280,42 @@ function Login({ hash, onOk, onCancel }) {
 export default function App() {
   const [saved, setSaved] = useState(load);
   const [c, setLive] = useState(saved);               // c = what is shown (live preview while editing)
-  const [authed, setAuthed] = useState(() => sessionStorage.getItem('uggA') === '1');
-  const [panel, setPanel] = useState(false), [login, setLogin] = useState(false);
+  const [authed, setAuthed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('uggA') === '1' || sessionStorage.getItem('uggA') === '1';
+    }
+    return false;
+  });
+  const [panel, setPanel] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('uggP') === '1';
+    }
+    return false;
+  });
+  const [login, setLogin] = useState(false);
   const [menu, setMenu] = useState(false), [active, setActive] = useState('home');
   const [lb, setLb] = useState(null), [msg, setMsg] = useState('');
   const glow = useRef();
+  const panelRef = useRef(panel);
+  panelRef.current = panel;
 
   useSmoothScroll();
   const toast = (m) => { setMsg(m); setTimeout(() => setMsg(''), 2200); };
-  const openAdmin = () => (authed ? setPanel(true) : setLogin(true));
+  const togglePanel = (open) => {
+    setPanel(open);
+    if (typeof window !== 'undefined') {
+      if (open) sessionStorage.setItem('uggP', '1');
+      else sessionStorage.removeItem('uggP');
+    }
+  };
+  const openAdmin = () => (authed ? togglePanel(true) : setLogin(true));
 
   useEffect(() => {
     fetchBackendContent({
       onCloudUpdate: (fresh) => {
         if (fresh) {
           setSaved(fresh);
-          setLive((curr) => (panel ? curr : fresh));
+          setLive((curr) => (panelRef.current ? curr : fresh));
         }
       },
     }).then((d) => {
@@ -304,7 +324,7 @@ export default function App() {
         setLive(d);
       }
     });
-  }, [panel]);
+  }, []); // Run ONLY once on mount; never re-fetch on admin panel open/close
 
   useEffect(() => {
     const s = document.documentElement.style;
@@ -523,7 +543,7 @@ export default function App() {
 
       <div className={`lb${lb ? ' on' : ''}`} onClick={() => setLb(null)}>{lb && <img src={fixImgUrl(lb)} alt="" />}</div>
 
-      {login && <Login hash={c.admin.hash} onCancel={() => setLogin(false)} onOk={() => { setAuthed(true); sessionStorage.setItem('uggA', '1'); setLogin(false); setPanel(true); }} />}
+      {login && <Login hash={c.admin.hash} onCancel={() => setLogin(false)} onOk={() => { setAuthed(true); localStorage.setItem('uggA', '1'); sessionStorage.setItem('uggA', '1'); setLogin(false); togglePanel(true); }} />}
       {panel && (
         <Admin
           content={saved}
@@ -544,8 +564,14 @@ export default function App() {
               toast('⚠️ Cloud server taking long to wake up. Saved locally.');
             }
           }}
-          onClose={() => { setLive(saved); setPanel(false); }}
-          onLogout={() => { setAuthed(false); sessionStorage.removeItem('uggA'); setLive(saved); setPanel(false); }}
+          onClose={() => { setLive(saved); togglePanel(false); }}
+          onLogout={() => {
+            setAuthed(false);
+            localStorage.removeItem('uggA');
+            sessionStorage.removeItem('uggA');
+            togglePanel(false);
+            setLive(saved);
+          }}
         />
       )}
       <div id="toast" className={msg ? 'on' : ''}>{msg}</div>

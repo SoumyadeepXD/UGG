@@ -35,7 +35,17 @@ const DESIGNATION_PRESETS = [
 ];
 
 export default function Admin({ content, onChange, onSave, onClose, onLogout, toast }) {
-  const [draft, setDraft] = useState(() => structuredClone(content));
+  const [draft, setDraft] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('ugg-draft');
+      if (cached) {
+        try {
+          return merge(content, JSON.parse(cached));
+        } catch { }
+      }
+    }
+    return structuredClone(content);
+  });
   const [activeTab, setActiveTab] = useState('tournaments');
   const [open, setOpen] = useState(false);
   const [serverOnline, setServerOnline] = useState(null);
@@ -166,10 +176,18 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
     checkBackendStatus(8000).then(setServerOnline);
     const poll = setInterval(() => {
       checkBackendStatus(8000).then(setServerOnline);
-    }, 12000);
+    }, 15000);
+
+    const onOnline = () => {
+      wakeUpBackend();
+      checkBackendStatus(8000).then(setServerOnline);
+    };
+    window.addEventListener('online', onOnline);
+
     return () => {
       cancelAnimationFrame(r);
       clearInterval(poll);
+      window.removeEventListener('online', onOnline);
     };
   }, []);
 
@@ -177,6 +195,9 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
     const d = structuredClone(draft);
     fn(d);
     setDraft(d);
+    if (typeof window !== 'undefined') {
+      try { localStorage.setItem('ugg-draft', JSON.stringify(d)); } catch { }
+    }
     onChange(d);
   };
 
@@ -333,6 +354,9 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
       d.admin.newPassword = '';
       setDraft(d);
       await onSave(d);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('ugg-draft');
+      }
     } finally {
       setSaving(false);
     }

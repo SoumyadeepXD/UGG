@@ -50,15 +50,23 @@ export const sha = async (t) =>
 export const load = () => {
   try {
     const local = localStorage.getItem('ugg-content');
-    if (local) return merge(DEF, JSON.parse(local));
+    if (local) {
+      const parsed = JSON.parse(local);
+      const merged = merge(DEF, parsed);
+      if (parsed._updatedAt) merged._updatedAt = parsed._updatedAt;
+      return merged;
+    }
   } catch (e) {
     console.warn('Could not read from localStorage:', e);
   }
-  return structuredClone(DEF);
+  const initial = structuredClone(DEF);
+  initial._updatedAt = initial._updatedAt || 1700000000000;
+  return initial;
 };
 
 export const save = (c) => {
   try {
+    if (!c._updatedAt) c._updatedAt = Date.now();
     localStorage.setItem('ugg-content', JSON.stringify(c));
   } catch (e) {
     console.warn('Could not save to localStorage:', e);
@@ -87,30 +95,33 @@ export const wakeUpBackend = () => {
 };
 
 /**
- * Loads content with Stale-While-Revalidate (SWR):
- * 1. Immediately returns cached or static content so page renders in <100ms.
- * 2. Asynchronously fetches from the online backend (Render) with generous timeout (35s)
- *    to handle cold-boot.
- * 3. If fresh data is received from cloud, calls onCloudUpdate(freshData) to update UI.
+ * Loads content with Stale-While-Revalidate (SWR) and Timestamp conflict protection:
+ * 1. Always preserves the user's latest local edits; never overwrites newer local data with older static files.
+ * 2. Fetches static CDN content.json only if it has a newer timestamp.
+ * 3. In background: queries Cloud Backend (Render). If cloud data is newer, updates screen.
+ *    If local data is newer than cloud (e.g. Render restarted/slept), auto-heals Cloud database.
  */
 export const fetchBackendContent = async ({ onCloudUpdate } = {}) => {
-  let fastestData = null;
+  const localData = load();
+  const localTime = Number(localData?._updatedAt) || 0;
+  let fastestData = localData;
 
-  // 1. Immediately try fetching static content.json directly from GitHub Pages CDN (<100ms)
+  // 1. Check static content.json from CDN
   try {
     const res = await fetch(`./content.json?_t=${Date.now()}`, { signal: AbortSignal.timeout(3000) });
     if (res.ok) {
-      const data = await res.json();
-      fastestData = merge(DEF, data);
-      save(fastestData);
+      const staticData = await res.json();
+      const staticTime = Number(staticData?._updatedAt) || 0;
+
+      // Only update if static CDN file is strictly newer than our local storage
+      if (staticTime > localTime) {
+        fastestData = merge(DEF, staticData);
+        fastestData._updatedAt = staticTime;
+        save(fastestData);
+      }
     }
   } catch {
     // Static fetch skipped or timed out
-  }
-
-  // Fallback to localStorage or built-in default
-  if (!fastestData) {
-    fastestData = load();
   }
 
   // 2. In background: fetch latest live data from Cloud Backend (Render)
@@ -119,14 +130,27 @@ export const fetchBackendContent = async ({ onCloudUpdate } = {}) => {
     (async () => {
       try {
         const res = await fetch(`${host}/api/content?_t=${Date.now()}`, {
-          signal: AbortSignal.timeout(35000), // Allows Render up to 35s to wake up if cold-booting
+          signal: AbortSignal.timeout(35000), // allows Render 35s to cold-boot
         });
         if (res.ok) {
           const cloudData = await res.json();
-          const merged = merge(DEF, cloudData);
-          save(merged);
-          if (typeof onCloudUpdate === 'function') {
-            onCloudUpdate(merged);
+          const cloudTime = Number(cloudData?._updatedAt) || 0;
+          const currentLocal = load();
+          const currentLocalTime = Number(currentLocal?._updatedAt) || 0;
+
+          if (cloudTime >= currentLocalTime && cloudTime > 0) {
+            // Cloud has newer data
+            const merged = merge(DEF, cloudData);
+            merged._updatedAt = cloudTime;
+            save(merged);
+            if (typeof onCloudUpdate === 'function') {
+              onCloudUpdate(merged);
+            }
+          } else if (currentLocalTime > cloudTime) {
+            // Local data is newer than Cloud! (e.g. Render restarted and wiped ephemeral disk)
+            // Auto-heal Render by pushing the newer local data back to the server
+            console.info('[UGG] Local edits are newer than Cloud. Auto-healing Cloud server...');
+            saveToBackend(currentLocal).catch(() => {});
           }
         }
       } catch (err) {
@@ -140,7 +164,8 @@ export const fetchBackendContent = async ({ onCloudUpdate } = {}) => {
 
 /** Saves content to backend server AND localStorage */
 export const saveToBackend = async (content) => {
-  save(content);
+  const stamped = { ...content, _updatedAt: Date.now() };
+  save(stamped);
   const host = getApiHost();
   let savedToBackend = false;
   let githubSynced = false;
@@ -150,7 +175,7 @@ export const saveToBackend = async (content) => {
     const res = await fetch(`${host}/api/content`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(content),
+      body: JSON.stringify(stamped),
       signal: AbortSignal.timeout(45000), // Allow 45s for Render wake-up if asleep
     });
     if (res.ok) {
