@@ -4,6 +4,7 @@
   "description": "UGG (UEM Gamerz Guild) Website with Backend & Admin Portal",
   "scripts": {
     "start": "node backend/server.js",
+    "postinstall": "npm install --prefix backend",
     "server": "node backend/server.js",
     "backend": "node backend/server.js",
     "frontend": "npm run dev --prefix react-version",

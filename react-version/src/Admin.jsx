@@ -1453,58 +1453,51 @@ export default function Admin({ content, onChange, onSave, onClose, onLogout, to
               ) : (
                 /* Mode 2: Static GitHub Pages In-Browser Direct Publish */
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ background: 'rgba(255,255,255,.04)', border: '1px solid var(--line)', borderRadius: 8, padding: 12 }}>
-                    <b style={{ color: '#fff', fontSize: 13 }}>Option 1: Direct GitHub Sync (Works directly on GitHub Pages!)</b>
-                    <p style={{ fontSize: 12, color: 'var(--mut)', margin: '4px 0 8px' }}>
-                      Publish updates directly to the <code>SoumyadeepXD/UGG</code> repository without needing a terminal or local server.
-                    </p>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <input
-                        type="password"
-                        placeholder="Paste your GitHub Personal Access Token (ghp_...)"
-                        value={ghToken}
-                        onChange={(e) => setGhToken(e.target.value)}
-                        style={{ flex: 1, minWidth: 240 }}
-                      />
-                      <button
-                        className="btn fill sm"
-                        onClick={handlePublishGitHub}
-                        disabled={publishing}
-                      >
-                        {publishing ? '⏳ Publishing...' : '🚀 Publish Live to Everyone'}
-                      </button>
+                  <div style={{ background: 'rgba(255,255,255,.04)', border: '1px solid var(--line)', borderRadius: 8, padding: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                      <b style={{ color: '#fff', fontSize: 13.5 }}>☁️ Render Cloud Backend (Recommended for Permanent Club Handover)</b>
+                      <span className={`adm-status-badge ${serverOnline ? 'online' : 'local'}`}>
+                        {serverOnline ? '🟢 Connected to Render' : '⚪ Not Connected'}
+                      </span>
                     </div>
-                    <div style={{ marginTop: 6, fontSize: 11.5 }}>
-                      <a
-                        href="https://github.com/settings/tokens/new?scopes=repo&description=UGG+Admin+Portal"
-                        target="_blank"
-                        rel="noopener"
-                        style={{ color: 'var(--red)', textDecoration: 'underline' }}
-                      >
-                        👉 Click here to generate a GitHub Token with "repo" scope (Takes 15 seconds)
-                      </a>
-                    </div>
-                    {publishMessage && (
-                      <p style={{ fontSize: 12, color: '#4ade80', marginTop: 8, fontWeight: 600 }}>
-                        {publishMessage}
-                      </p>
-                    )}
-                  </div>
-
-                  <div style={{ background: 'rgba(255,255,255,.04)', border: '1px solid var(--line)', borderRadius: 8, padding: 12 }}>
-                    <b style={{ color: '#fff', fontSize: 13 }}>Option 2: Connect a Cloud Backend (Render / Railway)</b>
-                    <p style={{ fontSize: 12, color: 'var(--mut)', margin: '4px 0 8px' }}>
-                      If you deployed <code>backend/server.js</code> to Render or Railway, enter your HTTPS backend URL here to sync live in real-time.
+                    <p style={{ fontSize: 12, color: 'var(--mut)', margin: '6px 0 10px' }}>
+                      Once your backend is deployed on Render, paste your live URL below. Any future coordinator can edit tournaments and upload posters without touching GitHub or needing personal tokens!
                     </p>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                       <input
                         placeholder="https://ugg-backend.onrender.com"
                         value={customApi}
                         onChange={(e) => setCustomApi(e.target.value)}
-                        style={{ flex: 1, minWidth: 240 }}
+                        style={{ flex: 1, minWidth: 260 }}
                       />
-                      <button className="sm" onClick={handleSaveCustomApi}>
-                        Connect Server
+                      <button className="btn fill sm" onClick={handleSaveCustomApi}>
+                        Connect Render Backend
+                      </button>
+                    </div>
+                    <div style={{ marginTop: 8, fontSize: 11.5, color: '#aaa' }}>
+                      💡 Default Blueprint URL: <code>https://ugg-backend.onrender.com</code>. Check the setup instructions to launch it in 2 clicks.
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(255,255,255,.02)', border: '1px solid #222', borderRadius: 8, padding: 12 }}>
+                    <b style={{ color: '#888', fontSize: 12 }}>Alternative: Direct GitHub Sync (Personal Token)</b>
+                    <p style={{ fontSize: 11.5, color: '#666', margin: '4px 0 8px' }}>
+                      Use your own GitHub Personal Access Token if you prefer publishing without a cloud server.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <input
+                        type="password"
+                        placeholder="GitHub Token (ghp_...)"
+                        value={ghToken}
+                        onChange={(e) => setGhToken(e.target.value)}
+                        style={{ flex: 1, minWidth: 220 }}
+                      />
+                      <button
+                        className="sm"
+                        onClick={handlePublishGitHub}
+                        disabled={publishing}
+                      >
+                        {publishing ? 'Publishing...' : 'Sync via GitHub'}
                       </button>
                     </div>
                   </div>

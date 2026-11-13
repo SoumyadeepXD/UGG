@@ -436,7 +436,7 @@ app.post('/api/reset', (req, res) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`===============================================`);
   console.log(`🎮 UGG Backend Server running at http://localhost:${PORT}`);
   console.log(`📁 Uploads available at http://localhost:${PORT}/uploads`);

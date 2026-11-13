@@ -1,5 +1,7 @@
 import { DEF } from './content.js';
 
+export const DEFAULT_RENDER_API = 'https://ugg-backend.onrender.com';
+
 /** Returns the active backend API host */
 export const getApiHost = () => {
   if (typeof window !== 'undefined') {
@@ -9,7 +11,7 @@ export const getApiHost = () => {
   return import.meta.env.VITE_API_URL || (
     typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ? (window.location.port === '5173' ? '' : 'http://localhost:5001')
-      : ''
+      : DEFAULT_RENDER_API
   );
 };
 
@@ -27,7 +29,10 @@ export const setCustomApiHost = (url) => {
 export const fixImgUrl = (url) => {
   if (!url) return '';
   if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url;
-  if (url.startsWith('/uploads/')) return '.' + url;
+  if (url.startsWith('/uploads/')) {
+    const host = getApiHost();
+    return host ? `${host}${url}` : '.' + url;
+  }
   return url;
 };
 
