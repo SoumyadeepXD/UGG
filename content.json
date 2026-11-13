@@ -68,7 +68,7 @@
       "CREATE.",
       "CONNECT."
     ],
-    "text": "The official gaming club of UEM \u2014 for players, creators, and game developers.",
+    "text": "The official gaming club of UEM — for players, creators, and game developers.",
     "btn1": "Explore Events",
     "btn2": "Join Community",
     "joinUrl": "#",
@@ -88,7 +88,7 @@
         "title": "Fortnite 1v1 Showdown",
         "game": "Fortnite",
         "meta": "64 Players",
-        "date": "Nov 2 \u2013 Nov 5",
+        "date": "Nov 2 – Nov 5",
         "img": "",
         "url": "",
         "cta": "Register now"
@@ -98,7 +98,7 @@
         "title": "Valorant Campus Clash",
         "game": "Valorant",
         "meta": "5v5",
-        "date": "Nov 10 \u2013 Nov 14",
+        "date": "Nov 10 – Nov 14",
         "img": "",
         "url": "",
         "cta": "Details"
@@ -108,7 +108,7 @@
         "title": "BGMI Squad Tournament",
         "game": "BGMI",
         "meta": "4 Players (Squad)",
-        "date": "Nov 18 \u2013 Nov 22",
+        "date": "Nov 18 – Nov 22",
         "img": "",
         "url": "",
         "cta": "Register"
@@ -165,45 +165,45 @@
   },
   "timeline": {
     "title": "EVENT TIMELINE",
-    "sub": "A look at what\u2019s coming up at UGG.",
+    "sub": "A look at what’s coming up at UGG.",
     "items": [
       {
-        "date": "Nov 2 \u2013 Nov 5",
+        "date": "Nov 2 – Nov 5",
         "title": "Fortnite 1v1 Showdown",
         "status": "live"
       },
       {
-        "date": "Nov 10 \u2013 Nov 14",
+        "date": "Nov 10 – Nov 14",
         "title": "Valorant Campus Clash",
         "status": "upcoming"
       },
       {
-        "date": "Nov 18 \u2013 Nov 22",
+        "date": "Nov 18 – Nov 22",
         "title": "BGMI Squad Tournament",
         "status": "registering"
       },
       {
-        "date": "Dec 1 \u2013 Dec 3",
+        "date": "Dec 1 – Dec 3",
         "title": "Game Jam 2026",
         "status": "upcoming"
       },
       {
-        "date": "Dec 8 \u2013 Dec 10",
+        "date": "Dec 8 – Dec 10",
         "title": "CS2 Open Cup",
         "status": "upcoming"
       },
       {
-        "date": "Dec 15 \u2013 Dec 17",
+        "date": "Dec 15 – Dec 17",
         "title": "Unity Basics Workshop",
         "status": "upcoming"
       },
       {
-        "date": "Jan 5 \u2013 Jan 7",
+        "date": "Jan 5 – Jan 7",
         "title": "FIFA Friday Finals",
         "status": "upcoming"
       },
       {
-        "date": "Jan 18 \u2013 Jan 20",
+        "date": "Jan 18 – Jan 20",
         "title": "Inter-College Gaming Fest",
         "status": "upcoming"
       }
@@ -346,9 +346,9 @@
     "url": "#"
   },
   "footer": {
-    "about": "The official gaming club of UEM \u2014 for players, creators, and game developers.",
+    "about": "The official gaming club of UEM — for players, creators, and game developers.",
     "location": "UEM Kolkata",
-    "copy": "\u00a9 2026 UEM Gamerz Guild (UGG). All Rights Reserved.",
+    "copy": "© 2026 UEM Gamerz Guild (UGG). All Rights Reserved.",
     "tagline": "Play. Compete. Create. Connect.",
     "cols": [
       {
@@ -423,5 +423,6 @@
       "role": "Lead Developer & Web Ops",
       "link": "https://github.com/SoumyadeepXD"
     }
-  ]
+  ],
+  "_updatedAt": 1794584211215
 }
